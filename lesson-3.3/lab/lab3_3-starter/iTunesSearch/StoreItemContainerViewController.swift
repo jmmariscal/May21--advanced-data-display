@@ -11,6 +11,15 @@ class StoreItemContainerViewController: UIViewController, UISearchResultsUpdatin
     
     var tableViewDataSource: UITableViewDiffableDataSource<String, StoreItem>!
     var items = [StoreItem]()
+    
+    var filteredItemsSnapshot: NSDiffableDataSourceSnapshot<String, StoreItem> {
+        var snapshot = NSDiffableDataSourceSnapshot<String, StoreItem>()
+        
+        for item in items{
+            snapshot.appendItems([item])
+        }
+        return snapshot
+    }
 
     let queryOptions = ["movie", "music", "software", "ebook"]
     
@@ -52,6 +61,12 @@ class StoreItemContainerViewController: UIViewController, UISearchResultsUpdatin
                 
                 return cell
             })
+    }
+    
+    private func createDataSourcer() {
+        tableViewDataSource = UICollectionViewDiffableDataSource<String, StoreItem>(collectionView: collectionContainerView, cellProvider: { (collectionView, indexPath, item) -> UICollectionViewCell? in
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: )
+        })
     }
                 
     @IBAction func switchContainerView(_ sender: UISegmentedControl) {
