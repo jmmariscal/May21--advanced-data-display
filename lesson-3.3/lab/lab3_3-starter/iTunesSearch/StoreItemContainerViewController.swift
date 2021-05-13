@@ -9,6 +9,7 @@ class StoreItemContainerViewController: UIViewController, UISearchResultsUpdatin
     let searchController = UISearchController()
     let storeItemController = StoreItemController()
     
+    var tableViewDataSource: UITableViewDiffableDataSource<String, StoreItem>!
     var items = [StoreItem]()
 
     let queryOptions = ["movie", "music", "software", "ebook"]
@@ -27,6 +28,30 @@ class StoreItemContainerViewController: UIViewController, UISearchResultsUpdatin
     func updateSearchResults(for searchController: UISearchController) {
         NSObject.cancelPreviousPerformRequests(withTarget: self, selector: #selector(fetchMatchingItems), object: nil)
         perform(#selector(fetchMatchingItems), with: nil, afterDelay: 0.3)
+    }
+    
+    func configureTableViewDataSource(_ tableView: UITableView) {
+        tableViewDataSource = UITableViewDiffableDataSource<String, StoreItem>(
+            tableView: tableView, cellProvider: { (tableView, indexPath, item) -> UITableViewCell? in
+                let cell = tableView.dequeueReusableCell(withIdentifier: "Item", for: indexPath) as! ItemTableViewCell
+                
+                cell.titleLabel.text = item.name
+                cell.detailLabel.text = item.artist
+                cell.itemImageView?.image = UIImage(systemName: "photo")
+                
+                self.storeItemController.fetchImage(from: item.artworkURL) { (result) in
+                    switch result {
+                    case .success(let image):
+                        DispatchQueue.main.async {
+                            cell.itemImageView.image = image
+                        }
+                    case .failure(let error):
+                        print("Error fetching image: \(error)")
+                    }
+                }
+                
+                return cell
+            })
     }
                 
     @IBAction func switchContainerView(_ sender: UISegmentedControl) {
