@@ -3,6 +3,9 @@
 import UIKit
 
 private let reuseIdentifier = "Item"
+private let headerIdentifier = "Header"
+private let headerKind = "header"
+
 
 class EmojiCollectionViewController: UICollectionViewController {
     @IBOutlet var layoutButton: UIBarButtonItem!
@@ -22,15 +25,84 @@ class EmojiCollectionViewController: UICollectionViewController {
         Emoji(symbol: "💤", name: "Snore", description: "Three blue \'z\'s.", usage: "tired, sleepiness"),
         Emoji(symbol: "🏁", name: "Checkered Flag", description: "A black-and-white checkered flag.", usage: "completion")
     ]
+    var sections: [Section] = []
+    var layout: UICollectionViewLayout?
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        collectionView.register(EmojiCollectionViewHeader.self,
+           forSupplementaryViewOfKind: headerKind, withReuseIdentifier:
+           headerIdentifier)
+        layout = generateGridLayout()
+        
+        if let layout = layout {
+            collectionView.collectionViewLayout = layout
+        }
+
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        updateSections()
         collectionView.reloadData()
     }
+    
+    func generateGridLayout() -> UICollectionViewLayout {
+        let padding: CGFloat = 20
+        
+        let item = NSCollectionLayoutItem(
+            layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .fractionalHeight(1)
+            )
+        )
+        
+        let group = NSCollectionLayoutGroup.horizontal(
+            layoutSize: NSCollectionLayoutSize(
+                widthDimension: .fractionalWidth(1),
+                heightDimension: .fractionalHeight(1/4)
+            ),
+            subitem: item,
+            count: 2
+        )
+        
+        group.interItemSpacing = .fixed(padding)
+        group.contentInsets = NSDirectionalEdgeInsets(
+            top: 0,
+            leading: padding,
+            bottom: 0,
+            trailing: padding
+        )
+        
+        let section = NSCollectionLayoutSection(group: group)
+        
+        section.interGroupSpacing = padding
+        
+        section.contentInsets = NSDirectionalEdgeInsets(
+            top: padding,
+            leading: 0,
+            bottom: padding,
+            trailing: 0
+        )
+        
+        return UICollectionViewCompositionalLayout(section: section)
+
+    }
+    
+    func updateSections() {
+        sections.removeAll()
+    
+        let grouped = Dictionary(grouping: emojis, by: { $0.sectionTitle })
+    
+        for (title, emojis) in grouped.sorted(by: { $0.0 < $1.0 }) {
+            sections.append(
+                Section(
+                    title: title,
+                    emojis: emojis.sorted(by: { $0.name < $1.name })
+                )
+            )
+        }
+    }
+
     
     @IBAction func switchLayouts(sender: UIBarButtonItem) {
     }
@@ -38,7 +110,7 @@ class EmojiCollectionViewController: UICollectionViewController {
     // MARK: - UICollectionViewDataSource
 
     override func numberOfSections(in collectionView: UICollectionView) -> Int {
-        return 1
+        return sections.count
     }
 
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
@@ -77,6 +149,21 @@ class EmojiCollectionViewController: UICollectionViewController {
         guard segue.identifier == "saveUnwind",
             let sourceViewController = segue.source as? AddEditEmojiTableViewController,
             let emoji = sourceViewController.emoji else { return }
+        if let path = collectionView.indexPathsForSelectedItems?.first,
+           let i = emojis.firstIndex(where: { $0 == emoji })
+        {
+            emojis[i] = emoji
+            updateSections()
+        
+            collectionView.reloadItems(at: [path])
+        } else {
+            emojis.append(emoji)
+            updateSections()
+            if let newIndexPath = indexPath(for: emoji) {
+                collectionView.insertItems(at: [newIndexPath])
+            }
+        }
+
     }
 
     // MARK: - UICollectionViewDelegate
@@ -92,6 +179,15 @@ class EmojiCollectionViewController: UICollectionViewController {
         
         return config
     }
+    
+    func indexPath(for emoji: Emoji) -> IndexPath? {
+            if let sectionIndex = sections.firstIndex(where: { $0.title == emoji.sectionTitle }),
+                let index = sections[sectionIndex].emojis.firstIndex(where: { $0 == emoji })
+            {
+                return IndexPath(item: index, section: sectionIndex)
+            }
+            return nil
+        }
 
     func deleteEmoji(at indexPath: IndexPath) {
     }
